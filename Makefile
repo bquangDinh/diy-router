@@ -1,11 +1,29 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -O0 -g
-LDFLAGS= -lpcap
 
-raspi_router: main.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+ENABLE_DEBUGGING ?= 0
 
-.PHONY: clean
+CFLAGS=-Wall -Wextra -O2 -Iinclude -DENABLE_DEBUGGING=$(ENABLE_DEBUGGING)
+
+SRC=$(wildcard src/*.c)
+OBJ=$(SRC:src/%.c=build/%.o)
+
+$(info ENABLE_DEBUGGING=$(ENABLE_DEBUGGING))
+
+TARGET=router
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) -o $@
+
+build/%.o: src/%.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f raspi_router
+	rm -rf build $(TARGET)
+
+run:
+	sudo ./router
+
+.PHONY: all clean run

@@ -47,8 +47,8 @@ sudo ip -n r2  link set r2-eth0 up
 sudo ip -n r2  link set r2-eth1 up
 sudo ip -n pc2 link set pc2-eth0 up
 
-# enable forwarding on routers
-sudo ip netns exec r1 sysctl -w net.ipv4.ip_forward=1 >/dev/null
+# enable forwarding on routers except the first one
+sudo ip netns exec r1 sysctl -w net.ipv4.ip_forward=0 >/dev/null
 sudo ip netns exec r2 sysctl -w net.ipv4.ip_forward=1 >/dev/null
 
 # routes
