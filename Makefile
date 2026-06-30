@@ -2,7 +2,7 @@ CC=gcc
 
 ENABLE_DEBUGGING ?= 0
 
-CFLAGS=-Wall -Wextra -O2 -Iinclude -DENABLE_DEBUGGING=$(ENABLE_DEBUGGING)
+CFLAGS=-Wall -Wextra -O3 -Iinclude -DENABLE_DEBUGGING=$(ENABLE_DEBUGGING)
 
 SRC=$(wildcard src/*.c)
 OBJ=$(SRC:src/%.c=build/%.o)

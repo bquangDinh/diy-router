@@ -11,16 +11,16 @@
 #include <stdio.h>
 #include <string.h>
 
-uint8_t read_bit_bm(bitmap_t bitmap, uint16_t i) {
-    return (bitmap >> i) & 1;
+uint8_t read_bit_bm(const bitmap_t bitmap, uint16_t i) {
+	return (bitmap[i / 8] >> (i % 8)) & 1;
 }
 
-void set_bit_bm(bitmap_t *bitmap, uint16_t i) {
-	*(bitmap) |= (1ULL << i);
+void set_bit_bm(bitmap_t bitmap, uint16_t i) {
+	bitmap[i / 8] |= (1u << (i % 8));
 }
 
-void clear_bit_from_bm(bitmap_t *bitmap, uint16_t i) {
-	*(bitmap) &= ~(1ULL << i);
+void clear_bit_from_bm(bitmap_t bitmap, uint16_t i) {
+	bitmap[i / 8] &= ~(1u << (i % 8));
 }
 
 void print_mac_addr(const uint8_t* mac) {

@@ -4,14 +4,17 @@
 #include <stdint.h>
 #include "queue.h"
 
-typedef uint64_t bitmap_t;
+#define BM_NUM_BLKS 1024
+#define BITMAP_SIZE ((BM_NUM_BLKS + 7) / 8)
+
+typedef unsigned char bitmap_t[BITMAP_SIZE];
 
 /**
  * Bitmap Operations
  */
-uint8_t read_bit_bm(bitmap_t bitmap, uint16_t i);
-void set_bit_bm(bitmap_t *bitmap, uint16_t i);
-void clear_bit_from_bm(bitmap_t *bitmap, uint16_t i);
+uint8_t read_bit_bm(const bitmap_t bitmap, uint16_t i);
+void set_bit_bm(bitmap_t bitmap, uint16_t i);
+void clear_bit_from_bm(bitmap_t bitmap, uint16_t i);
 
 /**
  * Debugging

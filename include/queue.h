@@ -25,9 +25,7 @@ typedef struct packet_queue {
 	packet_node_t* head;
 	packet_node_t* tail;
 
-	// sem_t rx_sem;
-	pthread_cond_t not_full;
-	pthread_cond_t not_empty;
+	sem_t rx_sem;
 	pthread_mutex_t qlock;
 } packet_queue_t;
 

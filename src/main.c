@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "queue.h"
 #include "utils.h"
 #include "pool.h"
+#include "ring_buffer.h"
 #include "ethernet.h"
 #include "ipv4.h"
 #include "arp.h"
@@ -20,7 +20,9 @@
 
 int SOCK = 0;
 
-static packet_queue_t rx_queue = { 0 };
+// static packet_queue_t rx_queue = { 0 };
+
+static rx_ring_t* rx_ring = NULL;
 
 static void packet_handler(ppacket_t* ppkt);
 
@@ -50,9 +52,13 @@ int main() {
 		return -1;
 	}
 
-	printf("Init rx queue...\n");
+	printf("Init rx ring buffer...\n");
 
-	init_queue(&rx_queue, AF_PACKET_BUFFER_NUM_PACKETS);
+	rx_ring = create_ring_buffer(AF_PACKET_BUFFER_NUM_PACKETS);
+
+	if (rx_ring == NULL) {
+		return -1;
+	}
 
 	printf("Init pool...\n");
 
@@ -90,8 +96,26 @@ int main() {
 
 	ssize_t len = 0;
 
+	ppacket_t* ppkt = NULL;
+
+	ppacket_t* discarded_placeholder = (ppacket_t*)malloc(sizeof(ppacket_t));
+
+	if (discarded_placeholder == NULL) {
+		perror("malloc");
+
+		return -1;
+	}
+
 	while (1) {
-		ppacket_t* ppkt = packet_pool_alloc();
+		ppkt = packet_pool_alloc();
+
+		if (ppkt == NULL) {
+			recvfrom(SOCK, discarded_placeholder, 1600, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
+
+			increase_discarded_count();
+
+			continue;
+		}
 
 		len = recvfrom(SOCK, ppkt->packet, 1600, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
 
@@ -110,9 +134,15 @@ int main() {
 		increase_rx_count();
 
 		// Queue this packet for processing
-		enqueue(&rx_queue, ppkt);
+		// enqueue(&rx_queue, ppkt);
 
-		increase_queued_count();
+		if (!rx_ring_enqueue(rx_ring, ppkt)) {
+			increase_pool_ring_full_drop();
+
+			free_packet(ppkt);
+
+			continue;
+		}
 	}
 
 	pthread_join(worker, NULL);
@@ -129,9 +159,15 @@ static void* worker_thread(void* arg) {
 
 	while (1) {
 		// Dequeue the packet
-		packet = dequeue(&rx_queue);
+		// packet = dequeue(&rx_queue);
+		packet = rx_ring_dequeue(rx_ring);
 
-		increase_dequeued_count();
+		if (packet == NULL) {
+			// yield
+			sched_yield();
+
+			continue;
+		}
 
 		// Perform routing, ARP, etc here
 		packet_handler(packet);
@@ -149,6 +185,8 @@ static void* telemetry_worker_thread(void* arg) {
 
 		print_metrics();
 	}
+
+	return NULL;
 }
 
 static void packet_handler(ppacket_t* ppkt) {

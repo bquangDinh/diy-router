@@ -5,6 +5,8 @@
 #include <stdio.h>
 
 static atomic_uint_fast64_t rx_count = 0;
+static atomic_uint_fast64_t discarded_count = 0;
+static atomic_uint_fast64_t pool_ring_drop_count = 0;
 static atomic_uint_fast64_t arp_count = 0;
 static atomic_uint_fast64_t ipv4_count = 0;
 static atomic_uint_fast64_t forward_count = 0;
@@ -21,6 +23,14 @@ static atomic_uint_fast64_t ethernet_mistmatch_count = 0;
 
 void increase_rx_count() {
 	atomic_fetch_add(&rx_count, 1);
+}
+
+void increase_discarded_count() {
+	atomic_fetch_add(&discarded_count, 1);
+}
+
+void increase_pool_ring_full_drop() {
+	atomic_fetch_add(&pool_ring_drop_count, 1);
 }
 
 void increase_arp_count() {
@@ -77,8 +87,10 @@ void record_pool_cap_count(uint16_t count) {
 
 void print_metrics() {
 	uint64_t rx = atomic_load(&rx_count);
-	uint64_t queued = atomic_load(&queued_count);
-	uint64_t dequeued = atomic_load(&dequeued_count);
+	uint64_t discarded = atomic_load(&discarded_count);
+	// uint64_t queued = atomic_load(&queued_count);
+	// uint64_t dequeued = atomic_load(&dequeued_count);
+	uint64_t pool_ring_drop = atomic_load(&pool_ring_drop_count);
 	uint64_t ethernet_outgoing = atomic_load(&ethernet_outgoing_count);
 	uint64_t ethernet_otherhost = atomic_load(&ethernet_otherhost_count);
 	uint64_t ethernet_broadcast_nonarp = atomic_load(&ethernet_broadcast_nonarp_count);
@@ -92,10 +104,12 @@ void print_metrics() {
 	uint64_t sendto_fail = atomic_load(&sendto_fail_count);
 	uint64_t pool_used_count = atomic_load(&recorded_pool_used_count);
 
-	printf("rx=%lu - queued=%lu - dequeued=%lu - pool_cap=%lu%% - eth_outgoing=%lu - eth_othhost=%lu - eth_brd_narp=%lu - eth_mismatch=%lu - arp=%lu - ipv4=%lu - forwarded=%lu - ttl_drop=%lu - bad_cks=%lu - send_fail=%lu\n",
+	printf("rx=%lu - discarded=%lu - pool_ring_drop=%lu - pool_cap=%lu%% - eth_outgoing=%lu - eth_othhost=%lu - eth_brd_narp=%lu - eth_mismatch=%lu - arp=%lu - ipv4=%lu - forwarded=%lu - ttl_drop=%lu - bad_cks=%lu - send_fail=%lu\n",
 		rx,
-		queued,
-		dequeued,
+		discarded,
+		pool_ring_drop,
+		// queued,
+		// dequeued,
 		100 * pool_used_count / AF_PACKET_BUFFER_NUM_PACKETS,
 		ethernet_outgoing,
 		ethernet_otherhost,

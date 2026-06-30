@@ -5,7 +5,7 @@
 #include "utils.h"
 
 #ifndef AF_PACKET_BUFFER_NUM_PACKETS
-#define AF_PACKET_BUFFER_NUM_PACKETS 200
+#define AF_PACKET_BUFFER_NUM_PACKETS 1024
 #endif
 
 void init_packet_pool();
@@ -17,5 +17,4 @@ void free_packet(ppacket_t* ppkt);
 void lock_plk(ppacket_t* ppkt);
 
 void unlock_plk(ppacket_t* ppkt);
-
 #endif

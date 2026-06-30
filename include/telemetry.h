@@ -5,6 +5,10 @@
 
 void increase_rx_count();
 
+void increase_discarded_count();
+
+void increase_pool_ring_full_drop();
+
 void increase_arp_count();
 
 void increase_ipv4_count();
