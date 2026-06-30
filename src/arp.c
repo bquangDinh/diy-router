@@ -80,7 +80,7 @@ arp_entry_t* alloc_arp_entry(const uint32_t ip, arp_state_t init_state) {
 	return NULL;
 }
 
-int send_arp_request(const uint32_t target_ip, interface_t* out_interace, int socket) {
+int send_arp_request(const uint32_t target_ip, interface_t* out_interface, int socket) {
 	size_t len = sizeof(struct ether_header) + sizeof(struct arp_packet);
 
 	uint8_t arp_req_packet[len];
@@ -92,9 +92,9 @@ int send_arp_request(const uint32_t target_ip, interface_t* out_interace, int so
 	// Make source MAC to be the outgoing interface's MAC
 	for (uint8_t i = 0; i < ETH_ALEN; ++i) {
 		eth_hdr->ether_dhost[i] = 0xFF;
-		eth_hdr->ether_shost[i] = out_interace->mac[i];
+		eth_hdr->ether_shost[i] = out_interface->mac[i];
 
-		arp->sha[i] = out_interace->mac[i];
+		arp->sha[i] = out_interface->mac[i];
 		arp->tha[i] = 0;
 	}
 
@@ -105,14 +105,19 @@ int send_arp_request(const uint32_t target_ip, interface_t* out_interace, int so
 	arp->hlen = 6; // MAC addr length
 	arp->plen = 4; // ipv4 addr length
 	arp->oper = htons(1); // ARP request
-	arp->spa = htonl(out_interace->ip);
+	arp->spa = htonl(out_interface->ip);
 	arp->tpa = htonl(target_ip);
 
-	struct sockaddr_ll* send_addr = &out_interace->sockaddr;
 
-	memcpy(send_addr->sll_addr, eth_hdr->ether_dhost, ETH_ALEN);
+	struct sockaddr_ll send_addr = {0};
 
-	ssize_t sent = sendto(socket, arp_req_packet, len, 0, (struct sockaddr*)send_addr, sizeof(*(send_addr)));
+	send_addr.sll_family = AF_PACKET;
+	send_addr.sll_ifindex = out_interface->sockaddr.sll_ifindex;
+	send_addr.sll_halen = ETH_ALEN;
+
+	memcpy(send_addr.sll_addr, eth_hdr->ether_dhost, ETH_ALEN);
+
+	ssize_t sent = sendto(socket, arp_req_packet, len, 0, (struct sockaddr*)&send_addr, sizeof(send_addr));
 
 	if (sent < 0) {
 		perror("sendto");
@@ -143,9 +148,15 @@ int send_arp_response(ppacket_t* arp_ppkt, int socket) {
 	// Swap source IP and destination IP
 	swap(&arp->spa, &arp->tpa, sizeof(uint32_t));
 
-	memcpy(out_interface->sockaddr.sll_addr, eth_hdr->ether_dhost, ETH_ALEN);
+	struct sockaddr_ll send_addr = {0};
 
-	ssize_t sent = sendto(socket, packet, arp_ppkt->len, 0, (struct sockaddr*)&out_interface->sockaddr, sizeof(out_interface->sockaddr));
+	send_addr.sll_family = AF_PACKET;
+	send_addr.sll_ifindex = out_interface->sockaddr.sll_ifindex;
+	send_addr.sll_halen = ETH_ALEN;
+
+	memcpy(send_addr.sll_addr, eth_hdr->ether_dhost, ETH_ALEN);
+
+	ssize_t sent = sendto(socket, packet, arp_ppkt->len, 0, (struct sockaddr*)&send_addr, sizeof(send_addr));
 
 	if (sent < 0) {
 		perror("sendto");
@@ -226,9 +237,15 @@ static void flush_pending_packets(arp_entry_t* arp_entry, int socket) {
 
 		memcpy(eth_hdr->ether_dhost, arp_entry->mac, ETH_ALEN);
 
-		memcpy(out_interface->sockaddr.sll_addr, arp_entry->mac, ETH_ALEN);
+		struct sockaddr_ll send_addr = {0};
 
-		ssize_t sent = sendto(socket, packet, ppkt->len, 0, (struct sockaddr*)&out_interface->sockaddr, sizeof((out_interface->sockaddr)));
+		send_addr.sll_family = AF_PACKET;
+		send_addr.sll_ifindex = out_interface->sockaddr.sll_ifindex;
+		send_addr.sll_halen = ETH_ALEN;
+
+		memcpy(send_addr.sll_addr, arp_entry->mac, ETH_ALEN);
+
+		ssize_t sent = sendto(socket, packet, ppkt->len, 0, (struct sockaddr*)&send_addr, sizeof(send_addr));
 
 		if (sent < 0) {
 			perror("sendto");

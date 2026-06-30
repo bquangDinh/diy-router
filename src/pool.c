@@ -47,8 +47,6 @@ ppacket_t* packet_pool_alloc() {
 
 		record_pool_cap_count(used);
 
-		printf("Pool is full!\n");
-
 		// Pool is full. Wait until it is not full
 		pthread_cond_wait(&pool_not_full, &bm_lock);
 	}

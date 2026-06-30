@@ -12,7 +12,7 @@
 #include <string.h>
 
 uint8_t read_bit_bm(bitmap_t bitmap, uint16_t i) {
-	return (bitmap & (1ULL << i));
+    return (bitmap >> i) & 1;
 }
 
 void set_bit_bm(bitmap_t *bitmap, uint16_t i) {

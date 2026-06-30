@@ -4,6 +4,7 @@
 #include <linux/if_packet.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "queue.h"
 #include "utils.h"

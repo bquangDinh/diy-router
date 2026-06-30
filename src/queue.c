@@ -26,8 +26,6 @@ void enqueue(packet_queue_t* queue, const ppacket_t* ppkt) {
 
 	if (queue->cap > 0) {
 		while (queue->counts == queue->cap) {
-			printf("Queue is full!\n");
-
 			// Queue is at capacity
 			// Signal the thread to wait until the queue has space
 			pthread_cond_wait(&queue->not_full, &queue->qlock);

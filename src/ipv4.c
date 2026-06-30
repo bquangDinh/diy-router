@@ -119,11 +119,15 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 		// Change destination host to be the target's MAC address
 		memcpy(eth_hdr->ether_dhost, arp_entry->mac, ETH_ALEN);
 
-		struct sockaddr_ll* send_addr = &out_interface->sockaddr;
+		struct sockaddr_ll send_addr = {0};
 
-		memcpy(send_addr->sll_addr, arp_entry->mac, ETH_ALEN);
+		send_addr.sll_family = AF_PACKET;
+		send_addr.sll_ifindex = out_interface->sockaddr.sll_ifindex;
+		send_addr.sll_halen = ETH_ALEN;
 
-		ssize_t sent = sendto(socket, packet, len, 0, (struct sockaddr*)send_addr, sizeof(*(send_addr)));
+		memcpy(send_addr.sll_addr, arp_entry->mac, ETH_ALEN);
+
+		ssize_t sent = sendto(socket, packet, len, 0, (struct sockaddr*)&send_addr, sizeof(send_addr));
 
 		if (sent < 0) {
 			perror("sendto");

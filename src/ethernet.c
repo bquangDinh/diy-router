@@ -67,18 +67,17 @@ static bool is_mac_broadcast(const uint8_t* mac) {
 static bool is_dest_mac_match_recv_interface(const uint8_t* mac, const uint16_t recv_interface) {
 	const interface_t* interface = get_interface_from_idx(recv_interface);
 
-
 	for (uint8_t i = 0; i < ETH_ALEN; ++i) {
 		if (mac[i] != interface->mac[i]) {
-			// printf("Dest MAC: ");
+			printf("Dest MAC: ");
 
-			// print_mac_addr(mac);
+			print_mac_addr(mac);
 
-			// printf(" != ");
+			printf(" != ");
 
-			// print_mac_addr(interface->mac);
+			print_mac_addr(interface->mac);
 
-			// printf("\n");
+			printf("\n");
 
 			return false;
 		}
