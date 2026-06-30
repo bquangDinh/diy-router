@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "queue.h"
 #include "utils.h"
@@ -14,6 +15,7 @@
 #include "ipv6.h"
 #include "interface.h"
 #include "route_conf.h"
+#include "telemetry.h"
 
 int SOCK = 0;
 
@@ -22,6 +24,8 @@ static packet_queue_t rx_queue = { 0 };
 static void packet_handler(ppacket_t* ppkt);
 
 static void* worker_thread(void* arg);
+
+static void* telemetry_worker_thread(void* arg);
 
 int main() {
 	struct sockaddr_ll recv_sockaddr = { 0 };
@@ -36,9 +40,18 @@ int main() {
 		return -1;
 	}
 
+	int rcvbuf = 16 * 1024 * 1024;
+
+	if (setsockopt(SOCK, SOL_SOCKET, SO_RCVBUF,
+				&rcvbuf, sizeof(rcvbuf)) < 0) {
+		perror("SO_RCVBUF");
+
+		return -1;
+	}
+
 	printf("Init rx queue...\n");
 
-	init_queue(&rx_queue);
+	init_queue(&rx_queue, AF_PACKET_BUFFER_NUM_PACKETS);
 
 	printf("Init pool...\n");
 
@@ -62,6 +75,16 @@ int main() {
 		return -1;
 	}
 
+	printf("Init telemetry...\n");
+
+	pthread_t telemetry_worker;
+
+	if (pthread_create(&telemetry_worker, NULL, telemetry_worker_thread, NULL) != 0) {
+		perror("pthread_create");
+
+		return -1;
+	}
+
 	printf("Listening...\n");
 
 	ssize_t len = 0;
@@ -69,9 +92,7 @@ int main() {
 	while (1) {
 		ppacket_t* ppkt = packet_pool_alloc();
 
-		lock_plk(ppkt);
-
-		len = recvfrom(SOCK, ppkt, sizeof(ppacket_t), 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
+		len = recvfrom(SOCK, ppkt->packet, 1600, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
 
 		if (len < 0) {
 			perror("recvfrom");
@@ -83,16 +104,19 @@ int main() {
 
 		ppkt->recv_interface_idx = recv_sockaddr.sll_ifindex;
 
-		unlock_plk(ppkt);
+		ppkt->pkttype = recv_sockaddr.sll_pkttype;
+
+		increase_rx_count();
 
 		// Queue this packet for processing
 		enqueue(&rx_queue, ppkt);
 
-		// Signal the consumer to wake up and process packet
-		sem_post(&rx_queue.rx_sem);
+		increase_queued_count();
 	}
 
 	pthread_join(worker, NULL);
+
+	pthread_join(telemetry_worker, NULL);
 
 	return 0;
 }
@@ -103,24 +127,27 @@ static void* worker_thread(void* arg) {
 	ppacket_t* packet = NULL;
 
 	while (1) {
-		// Wait until there is a packet to process
-		sem_wait(&rx_queue.rx_sem);
-
 		// Dequeue the packet
 		packet = dequeue(&rx_queue);
 
-		lock_plk(packet);
+		increase_dequeued_count();
 
 		// Perform routing, ARP, etc here
 		packet_handler(packet);
-
-		unlock_plk(packet);
 
 		// Give it back to the pool after finished processing packet
 		free_packet(packet);
 	}
 
 	return NULL;
+}
+
+static void* telemetry_worker_thread(void* arg) {
+	while (1) {
+		sleep(1); // wake up every second
+
+		print_metrics();
+	}
 }
 
 static void packet_handler(ppacket_t* ppkt) {
@@ -132,6 +159,7 @@ static void packet_handler(ppacket_t* ppkt) {
 #if ENABLE_DEBUGGING
 		printf("Ethernet frame invalid. Drop packet\n");
 #endif
+
 		return;
 	}
 
@@ -142,6 +170,8 @@ static void packet_handler(ppacket_t* ppkt) {
 #if ENABLE_DEBUGGING
 		printf("Received an ipv4 packet\n");
 #endif
+			increase_ipv4_count();
+
 			handle_ipv4_packet(ppkt, SOCK);
 			break;
 		case ETHER_TYPE_IPV6:
@@ -154,6 +184,8 @@ static void packet_handler(ppacket_t* ppkt) {
 #if ENABLE_DEBUGGING
 		printf("Received an ARP packet\n");
 #endif
+			increase_arp_count();
+
 			handle_arp_packet(ppkt, SOCK);
 			break;
 		case ETHER_TYPE_VLAN:

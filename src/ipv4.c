@@ -4,6 +4,7 @@
 #include "interface.h"
 #include "utils.h"
 #include "checksum.h"
+#include "telemetry.h"
 
 #include <netinet/ip.h>
 #include <net/ethernet.h>
@@ -19,11 +20,23 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 	struct ether_header* eth_hdr = (struct ether_header*)packet;
 	struct iphdr* ip_hdr = (struct iphdr*)(packet + sizeof(struct ether_header));
 
+// 	if (!verify_checksum(packet)) {
+// #if ENABLE_DEBUGGING
+// 		printf("Packet checksum failed. Drop it\n");
+// #endif
+// 		increase_checksum_bad_drop_count();
+
+// 		return -1;
+// 	}
+
 	// Drop packet if it is expired
 	if (ip_hdr->ttl <= 1) {
 #if ENABLE_DEBUGGING
 		printf("Packet has expired. Drop it\n");
 #endif
+
+		increase_ttl_drop_count();
+
 		return -1;
 	}
 
@@ -100,12 +113,6 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 		ip_hdr->check = 0;
 		ip_hdr->check = compute_ip_checksum(ip_hdr, ip_hdr->ihl * 4);
 
-#if ENABLE_DEBUGGING
-		print_tcp_packet_info(packet);
-
-		printf("Computed checksum is: 0x%04x\n", ntohs(ip_hdr->check));
-#endif
-
 		// Change source host to be the out going interface
 		memcpy(eth_hdr->ether_shost, out_interface->mac, ETH_ALEN);
 
@@ -121,8 +128,18 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 		if (sent < 0) {
 			perror("sendto");
 
+			increase_sendto_fail_count();
+
 			return -1;
 		}
+
+#if ENABLE_DEBUGGING
+		print_tcp_packet_info(packet);
+
+		printf("Sent with computed checksum is: 0x%04x\n", ntohs(ip_hdr->check));
+#endif
+
+		increase_forward_count();
 	}
 
 	return 0;

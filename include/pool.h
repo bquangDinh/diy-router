@@ -5,7 +5,7 @@
 #include "utils.h"
 
 #ifndef AF_PACKET_BUFFER_NUM_PACKETS
-#define AF_PACKET_BUFFER_NUM_PACKETS 35
+#define AF_PACKET_BUFFER_NUM_PACKETS 100
 #endif
 
 void init_packet_pool();

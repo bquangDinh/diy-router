@@ -58,6 +58,17 @@ sudo ip -n pc2 route add default via 10.0.2.1
 sudo ip -n r1 route add 10.0.2.0/24 via 10.0.12.2 dev r1-eth1
 sudo ip -n r2 route add 10.0.1.0/24 via 10.0.12.1 dev r2-eth0
 
+# Disable checksum offloading
+sudo ip netns exec pc1 ethtool -K pc1-eth0 tx off rx off sg off tso off gso off gro off lro off
+
+sudo ip netns exec r1 ethtool -K r1-eth0 tx off rx off sg off tso off gso off gro off lro off
+sudo ip netns exec r1 ethtool -K r1-eth1 tx off rx off sg off tso off gso off gro off lro off
+
+sudo ip netns exec r2 ethtool -K r2-eth0 tx off rx off sg off tso off gso off gro off lro off
+sudo ip netns exec r2 ethtool -K r2-eth1 tx off rx off sg off tso off gso off gro off lro off
+
+sudo ip netns exec pc2 ethtool -K pc2-eth0 tx off rx off sg off tso off gso off gro off lro off
+
 echo "Done."
 echo
 echo "Test:"
