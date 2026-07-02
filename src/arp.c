@@ -12,24 +12,24 @@
 #include <assert.h>
 
 static arp_entry_t arp_cache_table[ARP_CACHE_SIZE] = {
-	// {
-	// 	.ip = 0x0a000102,
-	// 	.mac = { 0x5E, 0x57, 0x78, 0x6D, 0xED, 0x99 },
-	// 	.state = ARP_RESOLVED,
-	// 	.valid = true
-	// },
-	// {
-	// 	.ip = 0x0a000202,
-	// 	.mac = { 0xE6, 0x4A, 0xF5, 0x66, 0x58, 0x7F },
-	// 	.state = ARP_RESOLVED,
-	// 	.valid = true,
-	// },
-	// {
-	// 	.ip = 0x0a000c02,
-	// 	.mac = { 0XA2, 0xC6, 0x68, 0x5B, 0x4A, 0x1A },
-	// 	.state = ARP_RESOLVED,
-	// 	.valid = true
-	// }
+	{
+		.ip = 0x0a000102,
+		.mac = { 0x5E, 0x57, 0x78, 0x6D, 0xED, 0x99 },
+		.state = ARP_RESOLVED,
+		.valid = true
+	},
+	{
+		.ip = 0x0a000202,
+		.mac = { 0xE6, 0x4A, 0xF5, 0x66, 0x58, 0x7F },
+		.state = ARP_RESOLVED,
+		.valid = true,
+	},
+	{
+		.ip = 0x0a000c02,
+		.mac = { 0XA2, 0xC6, 0x68, 0x5B, 0x4A, 0x1A },
+		.state = ARP_RESOLVED,
+		.valid = true
+	}
 };
 
 static void flush_pending_packets(arp_entry_t* arp_entry, int socket);

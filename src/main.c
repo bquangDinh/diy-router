@@ -110,14 +110,14 @@ int main() {
 		ppkt = packet_pool_alloc();
 
 		if (ppkt == NULL) {
-			recvfrom(SOCK, discarded_placeholder, 1600, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
+			recvfrom(SOCK, discarded_placeholder, PACKET_SIZE, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
 
 			increase_discarded_count();
 
 			continue;
 		}
 
-		len = recvfrom(SOCK, ppkt->packet, 1600, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
+		len = recvfrom(SOCK, ppkt->packet, PACKET_SIZE, 0, (struct sockaddr*)&recv_sockaddr, &addrlen);
 
 		if (len < 0) {
 			perror("recvfrom");

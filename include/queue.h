@@ -5,8 +5,10 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+#define PACKET_SIZE 1600
+
 typedef struct ppacket {
-	uint8_t packet[1600];
+	uint8_t packet[PACKET_SIZE];
 	uint16_t len;
 	uint8_t recv_interface_idx;
 	uint8_t out_interface_idx;

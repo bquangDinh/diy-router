@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "checksum.h"
 #include "telemetry.h"
+#include "icmp.h"
 
 #include <netinet/ip.h>
 #include <net/ethernet.h>
@@ -37,6 +38,8 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 
 		increase_ttl_drop_count();
 
+		send_icmp_time_exceed(ppkt, socket);
+
 		return -1;
 	}
 
@@ -49,6 +52,11 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 #if ENABLE_DEBUGGING
 		printf("No route found for this packet with ip 0x%08x. Drop it\n", dest_ip);
 #endif
+
+		printf("Net unreachable\n");
+
+		send_icmp_net_unreachable(ppkt, socket);
+
 		return -1;
 	}
 
@@ -96,9 +104,8 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 		add_packet_to_arp_queue(arp_entry, ppkt);
 	} else if (arp_entry->state == ARP_FAILED) {
 #if ENABLE_DEBUGGING
-		printf("Host Unreachable. Drop packet\n");
+		printf("Failed to send ARP request. Drop packet\n");
 #endif
-		// TODO: Send Host Unreachable
 		return -1;
 	} else {
 #if ENABLE_DEBUGGING
@@ -133,6 +140,8 @@ int handle_ipv4_packet(ppacket_t* ppkt, int socket) {
 			perror("sendto");
 
 			increase_sendto_fail_count();
+
+			send_icmp_host_unreachable(ppkt, socket);
 
 			return -1;
 		}
